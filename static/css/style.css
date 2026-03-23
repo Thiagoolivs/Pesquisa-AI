@@ -45,8 +45,11 @@ body {
 }
 
 /* ── Navbar ──────────────────────────────────────────────────────────────── */
+/* Navbar principal */
 .navbar {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
@@ -56,14 +59,19 @@ body {
   padding: 0 1rem;
   gap: 0.5rem;
   box-shadow: 0 1px 0 rgba(0,0,0,.04);
-  flex-wrap: wrap; /* permite quebrar linha em telas pequenas */
+  overflow-x: auto; /* permite scroll horizontal discreto no celular */
+  -webkit-overflow-scrolling: touch; /* suaviza scroll em iOS */
 }
 
+/* Esconde a barra de scroll visual */
+.navbar::-webkit-scrollbar { display: none; }
+
+/* Logo e badge */
 .navbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
+  gap: 0.55rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-heading);
   text-decoration: none;
@@ -71,76 +79,55 @@ body {
   letter-spacing: -0.02em;
 }
 
-.navbar-brand svg {
-  color: var(--primary);
-  width: 1.5em;
-  height: 1.5em;
-}
-
 .version-badge {
-  font-size: 0.6rem;
+  font-size: 0.64rem;
   font-weight: 800;
   background: linear-gradient(135deg, var(--primary), var(--purple));
   color: #fff;
-  padding: 0.15rem 0.5rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 99px;
   letter-spacing: 0.06em;
   flex-shrink: 0;
 }
 
-/* Navbar links */
+/* Links da navbar */
 .navbar-links {
   display: flex;
-  gap: 0.2rem;
+  gap: 0.25rem;
   margin-left: auto;
   flex-shrink: 0;
-  flex-wrap: wrap; /* permite quebrar linha em telas pequenas */
 }
 
 .navbar-links a {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.6rem;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
+  font-size: 0.83rem;
   font-weight: 600;
   color: var(--text-muted);
   text-decoration: none;
   transition: all 0.18s;
-  white-space: normal; /* permite quebrar linha */
+  white-space: nowrap; /* mantém tudo numa linha */
 }
 
-.navbar-links a:hover {
-  background: var(--bg-subtle);
-  color: var(--text-heading);
-}
+.navbar-links a:hover { background: var(--bg-subtle); color: var(--text-heading); }
+.navbar-links a.active { background: var(--primary-light); color: var(--primary); }
 
-.navbar-links a.active {
-  background: var(--primary-light);
-  color: var(--primary);
-}
-
-/* Media query para telas pequenas */
-@media (max-width: 600px) {
+/* Media Query mínima para celulares */
+@media (max-width: 500px) {
   .navbar {
-    justify-content: space-between;
-    padding: 0 0.8rem;
-    height: auto;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .navbar-links {
-    width: 100%;
-    justify-content: flex-start;
+    padding: 0 0.6rem;
     gap: 0.3rem;
   }
+
+  .navbar-brand { font-size: 1rem; }
+  .version-badge { font-size: 0.55rem; padding: 0.12rem 0.4rem; }
+
   .navbar-links a {
-    padding: 0.4rem 0.5rem;
+    padding: 0.35rem 0.6rem;
     font-size: 0.75rem;
-  }
-  .version-badge {
-    margin-top: 0.3rem;
   }
 }
 
