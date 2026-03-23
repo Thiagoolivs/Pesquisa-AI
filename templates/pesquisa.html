@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+{% load json_filters %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
+      Pesquisas
+    </h1>
+    <p class="page-subtitle">Gerencie análises salvas e formulários de coleta de respostas.</p>
+  </div>
+</div>
+
+{% if active_analysis %}
+<!-- ══ ANÁLISE ATIVA — modo contexto ════════════════════════════════════════ -->
+<div class="active-context-banner">
+  <div style="display:flex;align-items:center;gap:.6rem">
+    <span class="active-dot"></span>
+    <strong>Análise ativa:</strong>
+    {{ active_analysis.source_name|default:"dados carregados" }}
+    &nbsp;·&nbsp; {{ active_analysis.total_responses }} respostas &nbsp;·&nbsp; {{ active_analysis.columns|length }} colunas
+  </div>
+  <div style="display:flex;gap:.5rem">
+    <button class="btn btn-primary btn-sm" onclick="openSaveModal()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+      Salvar análise
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="discardAnalysis()">Descartar</button>
+  </div>
+</div>
+
+<div class="section-card">
+  <div class="section-card-header">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Colunas da análise ativa
+  </div>
+  <div class="columns-summary">
+    {% for col in active_analysis.columns %}
+    <div class="col-summary-item">
+      <span class="col-type-badge {% if col.type == 'numeric' %}badge-numeric{% elif col.type == 'categorical' %}badge-categorical{% else %}badge-text{% endif %}" style="font-size:.7rem">
+        {% if col.type == 'numeric' %}Num{% elif col.type == 'categorical' %}Cat{% else %}Txt{% endif %}
+      </span>
+      <span>{{ col.name }}</span>
+      <span class="text-muted text-sm">{{ col.total }} reg.</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<!-- ══ ESTADO LIVRE ══════════════════════════════════════════════════════════ -->
+
+<!-- Análises salvas -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+  <h2 class="section-title">Análises Salvas</h2>
+</div>
+
+{% if saved_analyses %}
+<div class="analyses-grid" id="savedGrid">
+  {% for a in saved_analyses %}
+  <div class="analysis-card" id="savedCard_{{ a.id }}">
+    <div class="analysis-card-header">
+      <div style="display:flex;align-items:center;gap:.5rem;min-width:0">
+        <span class="source-type-icon {% if a.source_type == 'csv' %}icon-csv{% elif a.source_type == 'form' %}icon-form{% else %}icon-manual{% endif %}">
+          {% if a.source_type == 'csv' %}CSV{% elif a.source_type == 'form' %}Form{% else %}Man{% endif %}
+        </span>
+        <span class="analysis-card-name">{{ a.name }}</span>
+      </div>
+      <button class="btn-icon" onclick="deleteSavedAnalysis({{ a.id }})" title="Excluir análise">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      </button>
+    </div>
+    <div class="analysis-card-meta">
+      {% if a.source_name %}<span class="meta-tag">{{ a.source_name }}</span>{% endif %}
+      <span class="meta-tag">{{ a.column_count }} coluna{{ a.column_count|pluralize }}</span>
+      <span class="meta-tag">{{ a.total_responses }} resposta{{ a.total_responses|pluralize }}</span>
+    </div>
+    {% if a.notes %}
+    <p class="analysis-card-notes">{{ a.notes }}</p>
+    {% endif %}
+    <div class="analysis-card-footer">
+      <span class="analysis-card-date">{{ a.created_at }}</span>
+      <button class="btn btn-primary btn-sm" onclick="openSavedAnalysis({{ a.id }})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Abrir análise
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="margin-bottom:2rem;background:#fff;border:1px solid #e2e8f0;border-radius:1rem;padding:3rem 2rem">
+  <div class="empty-state-icon">📊</div>
+  <h3>Nenhuma análise salva ainda</h3>
+  <p>Carregue um CSV ou abra um formulário para iniciar uma análise, depois salve-a aqui.</p>
+</div>
+{% endif %}
+
+<!-- Formulários -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;margin-top:1.5rem">
+  <h2 class="section-title">Formulários</h2>
+  <button class="btn btn-success btn-sm" onclick="openNewFormModal()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Criar formulário
+  </button>
+</div>
+
+{% if formularios %}
+<div class="analyses-grid">
+  {% for f in formularios %}
+  <div class="analysis-card" id="formCard_{{ f.id }}">
+    <div class="analysis-card-header">
+      <div style="display:flex;align-items:center;gap:.5rem;min-width:0">
+        <span class="source-type-icon icon-form">Form</span>
+        <span class="analysis-card-name">{{ f.titulo }}</span>
+      </div>
+      <button class="btn-icon" onclick="deleteForm({{ f.id }})" title="Excluir formulário">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      </button>
+    </div>
+    <div class="analysis-card-meta">
+      <span class="meta-tag">{{ f.perguntas|length }} pergunta{{ f.perguntas|length|pluralize }}</span>
+      <span class="meta-tag">{{ f.total_respostas }} resposta{{ f.total_respostas|pluralize }}</span>
+      <span class="meta-tag">{{ f.criado_em }}</span>
+    </div>
+    {% if f.descricao %}
+    <p class="analysis-card-notes">{{ f.descricao }}</p>
+    {% endif %}
+    <div class="analysis-card-footer">
+      <button class="btn btn-outline btn-sm" onclick="openRespondModal({{ f.id }}, '{{ f.titulo|escapejs }}', {{ f|tojson }})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Responder
+      </button>
+      {% if f.total_respostas > 0 %}
+      <button class="btn btn-primary btn-sm" onclick="openFormAsAnalysis({{ f.id }})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analisar
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="background:#fff;border:1px solid #e2e8f0;border-radius:1rem;padding:3rem 2rem">
+  <div class="empty-state-icon">📋</div>
+  <h3>Nenhum formulário criado</h3>
+  <p>Crie um formulário para coletar respostas e depois analisá-las.</p>
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- ══ MODAL NOVO FORMULÁRIO ═════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="newFormModal" style="display:none" onclick="if(event.target===this)closeNewFormModal()">
+  <div class="modal" style="max-width:640px;max-height:85vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+        Criar Formulário
+      </div>
+      <button class="modal-close" onclick="closeNewFormModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Título <span style="color:#dc2626">*</span></label>
+        <input id="fTitulo" class="form-control" type="text" placeholder="Ex: Satisfação dos Clientes — 2026" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea id="fDescricao" class="form-control" placeholder="Descrição opcional…" rows="2"></textarea>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+        <label class="form-label" style="margin:0">Perguntas</label>
+        <span class="text-sm text-muted" id="perguntaCount">0 pergunta(s)</span>
+      </div>
+      <div id="perguntasList"></div>
+      <button class="btn btn-outline w-full" style="margin-top:.5rem" onclick="addPergunta()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar Pergunta
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeNewFormModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="salvarFormulario()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+        Criar Formulário
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL RESPONDER FORMULÁRIO ═══════════════════════════════════════════ -->
+<div class="modal-backdrop" id="respondModal" style="display:none" onclick="if(event.target===this)closeRespondModal()">
+  <div class="modal" style="max-width:580px;max-height:85vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title" id="respondModalTitle">Responder Formulário</div>
+      <button class="modal-close" onclick="closeRespondModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="respondModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeRespondModal()">Fechar</button>
+      <button class="btn btn-primary" onclick="enviarRespostas()" id="enviarBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Enviar Respostas
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Form builder ──────────────────────────────────────────────────────────
+let perguntas = [];
+
+function genId() {
+  return (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openNewFormModal() {
+  perguntas = [];
+  document.getElementById('fTitulo').value = '';
+  document.getElementById('fDescricao').value = '';
+  addPergunta();
+  document.getElementById('newFormModal').style.display = 'flex';
+}
+
+function closeNewFormModal() {
+  document.getElementById('newFormModal').style.display = 'none';
+}
+
+function addPergunta() {
+  const isFirst = perguntas.length === 0;
+  perguntas.push({ id: genId(), texto: '', tipo: 'numerica', principal: isFirst, opcoes: [] });
+  renderPerguntas();
+}
+
+function removePergunta(id) {
+  const removing = perguntas.find(function(p){ return p.id === id; });
+  perguntas = perguntas.filter(function(p){ return p.id !== id; });
+  if (removing && removing.principal) {
+    const firstNum = perguntas.find(function(p){ return p.tipo === 'numerica'; });
+    if (firstNum) firstNum.principal = true;
+  }
+  renderPerguntas();
+}
+
+function onTipoChange(id, newType) {
+  const p = perguntas.find(function(p){ return p.id === id; });
+  if (!p) return;
+  const wasPrincipal = p.principal && p.tipo === 'numerica';
+  p.tipo = newType;
+  if (newType !== 'numerica' && wasPrincipal) {
+    p.principal = false;
+    const other = perguntas.find(function(q){ return q.tipo === 'numerica' && q.id !== id; });
+    if (other) other.principal = true;
+  }
+  if (newType === 'multipla_escolha' && (!p.opcoes || p.opcoes.length === 0)) {
+    p.opcoes = [{ id: genId(), texto: '' }, { id: genId(), texto: '' }];
+  }
+  renderPerguntas();
+}
+
+function addOpcao(pid) {
+  const p = perguntas.find(function(p){ return p.id === pid; });
+  if (!p) return;
+  if (!p.opcoes) p.opcoes = [];
+  p.opcoes.push({ id: genId(), texto: '' });
+  renderPerguntas();
+}
+
+function removeOpcao(pid, oid) {
+  const p = perguntas.find(function(p){ return p.id === pid; });
+  if (!p || !p.opcoes) return;
+  if (p.opcoes.length <= 2) { showToast('Mínimo de 2 opções.', 'error'); return; }
+  p.opcoes = p.opcoes.filter(function(o){ return o.id !== oid; });
+  renderPerguntas();
+}
+
+function updateOpcao(pid, oid, val) {
+  const p = perguntas.find(function(p){ return p.id === pid; });
+  if (!p || !p.opcoes) return;
+  const op = p.opcoes.find(function(o){ return o.id === oid; });
+  if (op) op.texto = val;
+}
+
+function renderPerguntas() {
+  document.getElementById('perguntaCount').textContent = perguntas.length + ' pergunta(s)';
+  document.getElementById('perguntasList').innerHTML = perguntas.map(function(p, i) {
+    let extras = '';
+    if (p.tipo === 'multipla_escolha') {
+      extras = '<div class="opcoes-list">' +
+        (p.opcoes || []).map(function(op, oi) {
+          return '<div class="opcao-row">' +
+            '<span class="opcao-letra">' + String.fromCharCode(65+oi) + ')</span>' +
+            '<input class="form-control" type="text" placeholder="Opção..." value="' + escHtml(op.texto) + '" ' +
+            'oninput="updateOpcao(\'' + p.id + '\',\'' + op.id + '\',this.value)" />' +
+            '<button class="btn-icon" onclick="removeOpcao(\'' + p.id + '\',\'' + op.id + '\')">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+            '</button></div>';
+        }).join('') + '</div>' +
+        '<button class="btn btn-outline btn-sm" style="margin-top:.35rem;font-size:.78rem" onclick="addOpcao(\'' + p.id + '\')">+ Adicionar opção</button>';
+    } else if (p.tipo === 'texto') {
+      extras = '<span class="tipo-texto-label">Texto livre — não disponível para análise estatística</span>';
+    }
+    return '<div class="question-card">' +
+      '<div class="question-num">' + (i+1) + '.</div>' +
+      '<div class="question-fields">' +
+      '<div class="question-row">' +
+      '<input class="form-control" type="text" placeholder="Texto da pergunta..." value="' + escHtml(p.texto) + '" oninput="perguntas[' + i + '].texto=this.value" />' +
+      '<select class="form-control form-select" style="max-width:180px" onchange="onTipoChange(\'' + p.id + '\',this.value)">' +
+      '<option value="numerica"' + (p.tipo==='numerica'?' selected':'') + '>Numérica</option>' +
+      '<option value="multipla_escolha"' + (p.tipo==='multipla_escolha'?' selected':'') + '>Múltipla escolha</option>' +
+      '<option value="texto"' + (p.tipo==='texto'?' selected':'') + '>Texto livre</option>' +
+      '</select></div>' + extras + '</div>' +
+      '<button class="btn-icon" onclick="removePergunta(\'' + p.id + '\')">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>' +
+      '</button></div>';
+  }).join('');
+}
+
+async function salvarFormulario() {
+  const titulo = document.getElementById('fTitulo').value.trim();
+  if (!titulo) { showToast('Título é obrigatório.', 'error'); return; }
+  if (!perguntas.length) { showToast('Adicione ao menos uma pergunta.', 'error'); return; }
+  if (perguntas.some(function(p){ return !p.texto.trim(); })) { showToast('Preencha todas as perguntas.', 'error'); return; }
+  for (const p of perguntas) {
+    if (p.tipo === 'multipla_escolha') {
+      if ((p.opcoes||[]).length < 2) { showToast('Múltipla escolha precisa de ao menos 2 opções.', 'error'); return; }
+      if ((p.opcoes||[]).some(function(o){ return !o.texto.trim(); })) { showToast('Preencha todas as opções.', 'error'); return; }
+    }
+  }
+  const body = { titulo: titulo, descricao: document.getElementById('fDescricao').value, perguntas: perguntas };
+  try {
+    const r = await fetch('/api/form/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error, 'error'); return; }
+    showToast('Formulário criado com sucesso!', 'success');
+    closeNewFormModal();
+    setTimeout(function(){ window.location.reload(); }, 700);
+  } catch(e) { showToast('Erro ao criar formulário.', 'error'); }
+}
+
+// ── Responder formulário ──────────────────────────────────────────────────
+let activeFormId = null;
+let activeFormData = null;
+let respostas = {};
+
+function openRespondModal(formId, titulo, formData) {
+  activeFormId = formId;
+  activeFormData = formData;
+  respostas = {};
+  document.getElementById('respondModalTitle').textContent = titulo;
+  const body = document.getElementById('respondModalBody');
+  body.innerHTML = formData.perguntas.map(function(q, i) {
+    let inputHtml = '';
+    if (q.tipo === 'numerica') {
+      inputHtml = '<input class="form-control" type="number" step="any" id="resp_'+q.id+'" oninput="respostas[\''+q.id+'\']=this.value" />';
+    } else if (q.tipo === 'multipla_escolha') {
+      inputHtml = '<div class="opcoes-radio">' +
+        (q.opcoes||[]).map(function(op, oi){
+          return '<label class="opcao-radio-label"><input type="radio" name="radio_'+q.id+'" value="'+escHtml(op.texto)+'" onchange="respostas[\''+q.id+'\']=this.value" /><span class="opcao-radio-text">'+String.fromCharCode(65+oi)+') '+escHtml(op.texto)+'</span></label>';
+        }).join('') + '</div>';
+    } else {
+      inputHtml = '<input class="form-control" type="text" placeholder="Sua resposta..." id="resp_'+q.id+'" oninput="respostas[\''+q.id+'\']=this.value" />';
+    }
+    return '<div class="responder-question"><label>'+(i+1)+'. '+escHtml(q.texto)+'<span class="tipo-tag">'+(q.tipo==='multipla_escolha'?'múltipla':q.tipo)+'</span></label>'+inputHtml+'</div>';
+  }).join('');
+  document.getElementById('respondModal').style.display = 'flex';
+}
+
+function closeRespondModal() {
+  document.getElementById('respondModal').style.display = 'none';
+}
+
+async function enviarRespostas() {
+  if (!activeFormData) return;
+  const payload = activeFormData.perguntas.map(function(q){ return { pergunta_id: q.id, valor: respostas[q.id] || '' }; });
+  try {
+    const r = await fetch('/api/form/' + activeFormId + '/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ respostas: payload }),
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error, 'error'); return; }
+    showToast('Respostas enviadas! Total: ' + d.total_respostas, 'success');
+    closeRespondModal();
+    setTimeout(function(){ window.location.reload(); }, 700);
+  } catch(e) { showToast('Erro ao enviar respostas.', 'error'); }
+}
+
+// ── Abrir como análise ────────────────────────────────────────────────────
+async function openFormAsAnalysis(formId) {
+  try {
+    const r = await fetch('/api/form/' + formId + '/open', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error, 'error'); return; }
+    showToast('Análise carregada! Abrindo dashboard…', 'success');
+    setTimeout(function(){ window.location.href = '/'; }, 700);
+  } catch(e) { showToast('Erro ao abrir análise.', 'error'); }
+}
+
+// ── Abrir análise salva ────────────────────────────────────────────────────
+async function openSavedAnalysis(id) {
+  try {
+    const r = await fetch('/api/analysis/' + id + '/open', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error, 'error'); return; }
+    showToast('Análise carregada! Abrindo dashboard…', 'success');
+    setTimeout(function(){ window.location.href = '/'; }, 700);
+  } catch(e) { showToast('Erro ao abrir análise.', 'error'); }
+}
+
+// ── Excluir análise salva ─────────────────────────────────────────────────
+async function deleteSavedAnalysis(id) {
+  if (!confirm('Excluir esta análise salva permanentemente?')) return;
+  try {
+    const r = await fetch('/api/analysis/' + id + '/delete', {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+    if (!r.ok) { const d = await r.json(); showToast(d.error, 'error'); return; }
+    const card = document.getElementById('savedCard_' + id);
+    if (card) card.remove();
+    showToast('Análise excluída.', 'success');
+  } catch(e) { showToast('Erro ao excluir análise.', 'error'); }
+}
+
+// ── Excluir formulário ─────────────────────────────────────────────────────
+async function deleteForm(id) {
+  if (!confirm('Excluir este formulário e todas as respostas permanentemente?')) return;
+  try {
+    const r = await fetch('/api/form/' + id + '/delete', {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+    if (!r.ok) { const d = await r.json(); showToast(d.error, 'error'); return; }
+    const card = document.getElementById('formCard_' + id);
+    if (card) card.remove();
+    showToast('Formulário excluído.', 'success');
+  } catch(e) { showToast('Erro ao excluir formulário.', 'error'); }
+}
+</script>
+{% endblock %}

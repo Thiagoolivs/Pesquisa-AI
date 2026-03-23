@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load json_filters %}
+
+{% block content %}
+<div class="page-header" style="text-align:center;display:block;padding-bottom:1.5rem">
+  <div style="display:inline-flex;align-items:center;justify-content:center;width:3.5rem;height:3.5rem;background:#eef2ff;border:1px solid #c7d2fe;border-radius:1.25rem;margin-bottom:1rem;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+    </svg>
+  </div>
+  <h1 class="page-title" style="justify-content:center;font-size:1.9rem">Análise com IA</h1>
+  <p class="page-subtitle" style="max-width:520px;margin:0 auto">Faça perguntas sobre os dados carregados e receba insights gerados por inteligência artificial.</p>
+</div>
+
+<div style="max-width:720px;margin:0 auto">
+
+{% if active_analysis %}
+<!-- ══ ESTADO ATIVO ══════════════════════════════════════════════════════════ -->
+<div class="ia-context-card">
+  <div class="ia-context-header">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Contexto carregado
+  </div>
+  <div class="ia-context-info">
+    <span><strong>{{ active_analysis.source_name|default:"Análise ativa" }}</strong></span>
+    <span class="meta-tag">{{ active_analysis.total_responses }} respostas</span>
+    <span class="meta-tag">{{ active_analysis.columns|length }} colunas</span>
+  </div>
+  <div class="ia-context-cols">
+    {% for col in active_analysis.columns %}
+    <div class="ia-col-chip">
+      <span class="col-type-badge {% if col.type == 'numeric' %}badge-numeric{% elif col.type == 'categorical' %}badge-categorical{% else %}badge-text{% endif %}" style="font-size:.65rem;padding:.1rem .4rem">
+        {% if col.type == 'numeric' %}N{% elif col.type == 'categorical' %}C{% else %}T{% endif %}
+      </span>
+      {{ col.name }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Sugestões de perguntas -->
+<div style="margin-bottom:1.25rem">
+  <p class="text-sm text-muted" style="margin-bottom:.5rem">Sugestões de perguntas:</p>
+  <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+    <button class="suggestion-chip" onclick="useSuggestion('Quais são os principais insights desses dados?')">💡 Principais insights</button>
+    <button class="suggestion-chip" onclick="useSuggestion('Há outliers ou valores anômalos nos dados?')">🔍 Outliers</button>
+    <button class="suggestion-chip" onclick="useSuggestion('Qual é a tendência geral observada nos dados?')">📈 Tendência geral</button>
+    <button class="suggestion-chip" onclick="useSuggestion('Que recomendações você faria com base nessa análise?')">✅ Recomendações</button>
+  </div>
+</div>
+
+{% else %}
+<!-- ══ ESTADO LIVRE ══════════════════════════════════════════════════════════ -->
+<div class="ia-no-data-banner">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <div>
+    <strong>Nenhum dado carregado</strong>
+    <p class="text-sm text-muted" style="margin-top:.2rem">Para aproveitar ao máximo a IA, carregue um CSV ou abra uma análise. A IA ainda pode responder, mas sem contexto específico dos seus dados.</p>
+  </div>
+  <a href="/pesquisa" class="btn btn-outline btn-sm" style="white-space:nowrap">Ir para Pesquisas</a>
+</div>
+{% endif %}
+
+<!-- Chat -->
+<div class="ia-card" style="margin-bottom:1rem">
+  <textarea class="ia-textarea" id="perguntaInput" placeholder="Ex: Quais são os principais padrões nos dados? Há correlações entre colunas? O que os dados revelam?&#10;&#10;Ctrl+Enter para enviar" rows="4"></textarea>
+  <div class="ia-footer">
+    <span class="ia-powered">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M8 10h8M8 14h5"/></svg>
+      Powered by Groq · Llama 3.1
+    </span>
+    <button class="btn btn-indigo" onclick="gerarAnalise()" id="gerarBtn">
+      Gerar Análise
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Histórico de respostas -->
+<div id="iaHistory"></div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if active_analysis %}
+const activeAnalysis = {{ active_analysis|tojson }};
+{% else %}
+const activeAnalysis = null;
+{% endif %}
+
+const history = [];
+
+function useSuggestion(text) {
+  document.getElementById('perguntaInput').value = text;
+  document.getElementById('perguntaInput').focus();
+}
+
+async function gerarAnalise() {
+  const pergunta = document.getElementById('perguntaInput').value.trim();
+  if (!pergunta) { showToast('Digite uma pergunta.', 'error'); return; }
+
+  const btn = document.getElementById('gerarBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Gerando...';
+
+  addHistoryItem(pergunta, null, true);
+
+  try {
+    const r = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ pergunta: pergunta }),
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Erro na IA.', 'error'); removeLastLoading(); return; }
+    updateLastHistoryItem(d.resposta);
+    document.getElementById('perguntaInput').value = '';
+  } catch(e) {
+    removeLastLoading();
+    showToast('Erro ao conectar com a IA.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Gerar Análise <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+  }
+}
+
+function addHistoryItem(question, answer, loading) {
+  const container = document.getElementById('iaHistory');
+  const id = 'hist_' + Date.now();
+  const el = document.createElement('div');
+  el.id = id;
+  el.className = 'ia-history-item';
+  el.innerHTML =
+    '<div class="ia-question-bubble">' + escHtml(question) + '</div>' +
+    '<div class="ia-answer-bubble">' +
+    (loading
+      ? '<div class="ia-loading"><span></span><span></span><span></span></div>'
+      : formatAnswer(answer)) +
+    '</div>';
+  container.insertBefore(el, container.firstChild);
+  history.push(id);
+}
+
+function updateLastHistoryItem(answer) {
+  if (!history.length) return;
+  const el = document.getElementById(history[history.length - 1]);
+  if (!el) return;
+  const bubble = el.querySelector('.ia-answer-bubble');
+  if (bubble) bubble.innerHTML = formatAnswer(answer);
+}
+
+function removeLastLoading() {
+  if (!history.length) return;
+  const id = history.pop();
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function formatAnswer(text) {
+  if (!text) return '';
+  return '<div class="ia-answer-header">' +
+    '<div class="ia-answer-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>' +
+    '<span class="ia-answer-title">Análise da IA</span>' +
+    '</div>' +
+    '<div class="ia-answer-text">' + escHtml(text) + '</div>';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('perguntaInput').addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'Enter') gerarAnalise();
+});
+</script>
+{% endblock %}

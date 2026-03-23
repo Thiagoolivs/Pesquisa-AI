@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pesquisa AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=8" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="navbar-brand">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>
+    </svg>
+    Pesquisa AI
+  </a>
+  <span class="version-badge">v5.0</span>
+
+  {% if active_analysis %}
+  <div class="active-analysis-bar">
+    <span class="active-dot"></span>
+    <span class="active-label">
+      {% if active_analysis.type == 'csv' %}CSV{% elif active_analysis.type == 'form' %}Formulário{% else %}Análise{% endif %}:
+      <strong>{{ active_analysis.source_name|default:"Análise ativa" }}</strong>
+      &nbsp;·&nbsp; {{ active_analysis.total_responses }} respostas &nbsp;·&nbsp; {{ active_analysis.columns|length }} colunas
+    </span>
+    <button class="btn-save-analysis" onclick="openSaveModal()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+      Salvar
+    </button>
+    <button class="btn-discard-analysis" onclick="discardAnalysis()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Descartar
+    </button>
+  </div>
+  {% endif %}
+
+  <div class="navbar-links">
+    <a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a href="/pesquisa" class="{% if active_page == 'pesquisa' %}active{% endif %}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+      Pesquisas
+    </a>
+    <a href="/ia" class="{% if active_page == 'ia' %}active{% endif %}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      IA
+    </a>
+  </div>
+</nav>
+
+<div class="container">
+  {% block content %}{% endblock %}
+</div>
+
+<!-- Save Modal -->
+<div class="modal-backdrop" id="saveModal" style="display:none" onclick="if(event.target===this)closeSaveModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+        Salvar Análise
+      </div>
+      <button class="modal-close" onclick="closeSaveModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nome <span style="color:#DC2626">*</span></label>
+        <input id="saveAnalysisName" class="form-control" type="text" placeholder="Ex: Pesquisa de Satisfação — Mar 2026" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Anotações</label>
+        <textarea id="saveAnalysisNotes" class="form-control" rows="3" placeholder="Observações, contexto ou comentários..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSaveModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveAnalysis()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+        Salvar e Concluir
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function showToast(msg, type) {
+  type = type || '';
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+  t.innerHTML = '<span style="flex-shrink:0">' + icon + '</span> ' + msg;
+  c.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ t.remove(); }, 300); }, 3500);
+}
+
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  return Number.isInteger(n) ? String(n) : parseFloat(n).toFixed(2);
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+  return v ? v[2] : '';
+}
+
+function openSaveModal() {
+  document.getElementById('saveModal').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('saveAnalysisName').focus(); }, 50);
+}
+
+function closeSaveModal() {
+  document.getElementById('saveModal').style.display = 'none';
+}
+
+async function saveAnalysis() {
+  const name = document.getElementById('saveAnalysisName').value.trim();
+  if (!name) { showToast('Informe um nome para a análise.', 'error'); return; }
+  const notes = document.getElementById('saveAnalysisNotes').value;
+  try {
+    const r = await fetch('/api/analysis/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ name, notes }),
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Erro ao salvar.', 'error'); return; }
+    showToast('Análise "' + d.name + '" salva!', 'success');
+    closeSaveModal();
+    setTimeout(function(){ window.location.reload(); }, 800);
+  } catch(e) { showToast('Erro ao salvar análise.', 'error'); }
+}
+
+async function discardAnalysis() {
+  if (!confirm('Descartar a análise atual? Os dados não salvos serão perdidos.')) return;
+  try {
+    await fetch('/api/analysis/discard', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } });
+    window.location.reload();
+  } catch(e) { showToast('Erro ao descartar.', 'error'); }
+}
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
