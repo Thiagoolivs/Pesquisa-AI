@@ -120,32 +120,28 @@ http://localhost:8000
 
 ```
 
-##🧪 Como Usar
-Criar pesquisa
-Acesse /pesquisa
+## 🧪 Como Usar
+Ação	Passos
+Criar pesquisa	Acesse /pesquisa
 Crie perguntas
 Defina uma como principal
-Coletar respostas
-Preencha e envie formulários
+Coletar respostas	Preencha e envie formulários
 Dados são armazenados automaticamente
-Analisar dados
-Dashboard com estatísticas
+Analisar dados	Dashboard com estatísticas
 Upload de CSV
 Gráficos automáticos
-Usar IA
-Acesse /ia
+Usar IA	Acesse /ia
 Faça perguntas em linguagem natural
-Receba insights sobre os dados
-
-📁 Estrutura do Projeto
-pesquisa_ai/
-├── config/
-├── core/
-├── static/
-├── templates/
-├── manage.py
-└── requirements.txt
-📌 Rotas principais
+Receba insights
+## 📁 Estrutura do Projeto
+Pasta / Arquivo	Descrição
+config/	Configurações do Django
+core/	Models, views e lógica de negócio
+static/	CSS, JS e arquivos estáticos
+templates/	Templates HTML
+manage.py	Entrypoint do Django
+requirements.txt	Dependências do projeto
+## 📌 Rotas principais
 Método	Rota	Descrição
 GET	/	Dashboard
 GET	/pesquisa	Formulários
@@ -153,11 +149,11 @@ GET	/ia	IA
 POST	/upload_csv	Análise CSV
 POST	/formulario	Criar formulário
 
-👨‍💻 Autor
+## 👨‍💻 Autor
 
 Thiago de Oliveira Coelho Souza
 2026
 
-📄 Licença
+## 📄 Licença
 
 Todos os direitos reservados.
