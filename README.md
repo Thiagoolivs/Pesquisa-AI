@@ -121,33 +121,32 @@ http://localhost:8000
 ```
 
 ## 🧪 Como Usar
-Ação	Passos
-Criar pesquisa	Acesse /pesquisa
-Crie perguntas
-Defina uma como principal
-Coletar respostas	Preencha e envie formulários
-Dados são armazenados automaticamente
-Analisar dados	Dashboard com estatísticas
-Upload de CSV
-Gráficos automáticos
-Usar IA	Acesse /ia
-Faça perguntas em linguagem natural
-Receba insights
+| Ação                  | Passos                                                                     |
+| --------------------- | -------------------------------------------------------------------------- |
+| **Criar pesquisa**    | Acesse `/pesquisa` <br> Crie perguntas <br> Defina uma como principal      |
+| **Coletar respostas** | Preencha e envie formulários <br> Dados são armazenados automaticamente    |
+| **Analisar dados**    | Dashboard com estatísticas <br> Upload de CSV <br> Gráficos automáticos    |
+| **Usar IA**           | Acesse `/ia` <br> Faça perguntas em linguagem natural <br> Receba insights |
+
 ## 📁 Estrutura do Projeto
-Pasta / Arquivo	Descrição
-config/	Configurações do Django
-core/	Models, views e lógica de negócio
-static/	CSS, JS e arquivos estáticos
-templates/	Templates HTML
-manage.py	Entrypoint do Django
-requirements.txt	Dependências do projeto
+| Pasta / Arquivo    | Descrição                         |
+| ------------------ | --------------------------------- |
+| `config/`          | Configurações do Django           |
+| `core/`            | Models, views e lógica de negócio |
+| `static/`          | CSS, JS e arquivos estáticos      |
+| `templates/`       | Templates HTML                    |
+| `manage.py`        | Entrypoint do Django              |
+| `requirements.txt` | Dependências do projeto           |
+
 ## 📌 Rotas principais
-Método	Rota	Descrição
-GET	/	Dashboard
-GET	/pesquisa	Formulários
-GET	/ia	IA
-POST	/upload_csv	Análise CSV
-POST	/formulario	Criar formulário
+| Método | Rota          | Descrição        |
+| ------ | ------------- | ---------------- |
+| GET    | `/`           | Dashboard        |
+| GET    | `/pesquisa`   | Formulários      |
+| GET    | `/ia`         | IA               |
+| POST   | `/upload_csv` | Análise CSV      |
+| POST   | `/formulario` | Criar formulário |
+
 
 ## 👨‍💻 Autor
 
