@@ -1,8 +1,12 @@
 # 🚀 Pesquisa-AI
 > Transforme dados de pesquisas em insights inteligentes com análise estatística e IA integrada.
+
 Plataforma web completa para **criação de formulários**, **coleta de respostas** e **análise estatística com Inteligência Artificial**.
 
 Desenvolvida com Django e PostgreSQL, a aplicação permite transformar dados brutos em **insights claros e acionáveis**.
+
+## 🌐 Acesse o projeto
+https:?
 
 ---
 
@@ -113,7 +117,10 @@ python manage.py runserver
 Acesse:
 
 http://localhost:8000
-🧪 Como Usar
+
+```
+
+##🧪 Como Usar
 Criar pesquisa
 Acesse /pesquisa
 Crie perguntas
@@ -129,6 +136,7 @@ Usar IA
 Acesse /ia
 Faça perguntas em linguagem natural
 Receba insights sobre os dados
+
 📁 Estrutura do Projeto
 pesquisa_ai/
 ├── config/
